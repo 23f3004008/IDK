@@ -16,7 +16,7 @@ app.add_middleware(
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    target_product = "Gadget"  # <-- Replace with actual product name shown in the portal
+    target_product = "Widget"  # <-- Replace with actual product name shown in the portal
     total_sum = 0
 
     contents = await file.read()

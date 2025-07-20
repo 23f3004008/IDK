@@ -8,42 +8,64 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"], 
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-EMAIL = "yourmail"  # Replace with your email
+EMAIL = "yourmail"
 EXAM_ID = "tds-2025-05-roe"
 
 def clean_text(text: str) -> str:
+    if not text:
+        return ""
     return text.strip().lower()
 
 def clean_amount(raw: str) -> float:
-    raw = raw.strip().replace(" ", "")
-    raw = raw.replace(",", ".") 
-    return float(re.sub(r"[^\d.]", "", raw)) 
+    if not raw:
+        return 0.0
+    raw = raw.strip()
+    raw = raw.replace(" ", "")
+ 
+    if ',' in raw and raw.count(',') == 1:
+        raw = raw.replace('.', '')  
+        raw = raw.replace(',', '.') 
+    else:
+ 
+        raw = raw.replace(',', '') 
+    raw = re.sub(r"[^\d\.-]", "", raw)
+    try:
+        return float(raw)
+    except ValueError:
+        return 0.0
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     content = await file.read()
     decoded = content.decode("utf-8", errors="ignore")
-    reader = csv.reader(io.StringIO(decoded))
+    reader = csv.reader(io.StringIO(decoded), delimiter=';')
 
-    headers = next(reader, [])
+    headers = next(reader, None)
+    if not headers or len(headers) < 4:
+        return {
+            "answer": 0.0,
+            "email": EMAIL,
+            "exam": EXAM_ID
+        }
+
     food_total = 0.0
 
     for row in reader:
         if len(row) < 4:
-            continue  
-        name, date_str, amount_str, category = row[:4]
+            continue
+        row = [cell.strip() for cell in row]
 
-        if clean_text(category) == "food":
-            try:
-                amount = clean_amount(amount_str)
-                food_total += amount
-            except ValueError:
-                continue 
+        amount_str = row[2]
+        category_str = row[3]
+
+        if clean_text(category_str) == "food":
+            amount = clean_amount(amount_str)
+            food_total += amount
 
     return {
         "answer": round(food_total, 2),
@@ -51,6 +73,7 @@ async def analyze(file: UploadFile = File(...)):
         "exam": EXAM_ID
     }
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("2_csv_fastapi:app", host="0.0.0.0", port=8004, reload=True)
+    uvicorn.run("4_csv_fastapi:app", host="0.0.0.0", port=8004, reload=True)
