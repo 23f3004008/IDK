@@ -22,4 +22,4 @@ jobs:
           playwright install chromium
 
       - name: Run sum script (yourmail)
-        run: python 4_githubaction.py
+        run: python 5_githubaction.py
